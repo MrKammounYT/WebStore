@@ -11,8 +11,8 @@ using TP2.Models;
 namespace TP2.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260304105350_MakeImageNullable")]
-    partial class MakeImageNullable
+    [Migration("20260304112501_CleanStart")]
+    partial class CleanStart
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -53,7 +53,6 @@ namespace TP2.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Image")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")

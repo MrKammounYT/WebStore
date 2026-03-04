@@ -12,7 +12,7 @@
                 <h5><b>Nom : </b> @product.Name</h5>
                 <h5><b>Prix : </b>@product.Price</h5>
                 <h5><b>Quantité : </b> @product.QteStock</h5>
-                <h5><b>Catégorie : @product.Category.CategoryName</b></h5>
+                <h5><b>Catégorie : @(product.Category?.CategoryName ?? "N/A")</b></h5>
             </div>
             <img class="card-img-top imageThumbnail" src="@photoPath" asp-append-version="true" />
             <div class="card-footer text-center">

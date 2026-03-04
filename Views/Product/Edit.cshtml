@@ -34,10 +34,10 @@
         <span asp-validation-for="CategoryId" class="text-danger"></span>
     </div>
     <div class="form-group row">
-        <label asp-for="ImagePath" class="col-sm-2 col-form-label"></label>
+        <label class="col-sm-2 col-form-label">Image :</label>
         <div class="col-sm-10">
             <div class="custom-file">
-                <input asp-for="ImagePath" class="custom-file-input form-control" id="imageInput">
+                <input type="file" name="files" class="custom-file-input form-control" id="imageInput">
                 <label class="custom-file-label" for="imageInput">Cliquer ici pour changer la photo</label>
             </div>
         </div>
@@ -48,7 +48,7 @@
     <div class="form-group row">
         <div class="col-sm-10">
             <button type="submit" class="btn btn-primary">Update</button>
-            <a asp-action="Index" asp-controller="Product" class="btn btn-secondary">Cancel</a>
+            <a asp-action="Index" asp-controller="Product" class="btn btn-primary">Cancel</a>
         </div>
     </div>
 </form>

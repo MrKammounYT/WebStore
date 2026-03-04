@@ -27,14 +27,18 @@
             </div>
             <div class="form-group">
                 <label asp-for="CategoryId" class="control-label"></label>
-                <select asp-for="CategoryId" class="form-control" asp-items="ViewBag.CategoryId"></select>
+                <select asp-for="CategoryId" class="form-control" asp-items="ViewBag.CategoryId">
+                    <option value="">-- Select a Category --</option>
+                </select>
+                <span asp-validation-for="CategoryId" class="text-danger"></span>
             </div>
             <div class="form-group row">
-                <label asp-for="ImagePath" class="col-sm-2 col-form-label"></label>
+                <label class="col-sm-2 col-form-label">Image :</label>
                 <div class="col-sm-10">
                     <div class="custom-file">
-                        <input asp-for="ImagePath" class="form-control custom-file-input">
-                        <label class="custom-file-label">Choose File...</label>
+                        <%-- plain file input: asp-for on IFormFile crashes Razor in .NET 8 --%>
+                        <input type="file" name="files" class="form-control custom-file-input" id="imageInput">
+                        <label class="custom-file-label" for="imageInput">Choose File...</label>
                     </div>
                 </div>
             </div>

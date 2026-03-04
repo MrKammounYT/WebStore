@@ -8,49 +8,46 @@ namespace TP2.Controllers
 {
     public class ProductController : Controller
     {
-        readonly IProductRepository productRepository;
+        readonly IProductRepository ProductRepository;
         readonly ICategorieRepository CategRepository;
         private readonly IWebHostEnvironment hostingEnvironment;
 
-        public ProductController(IProductRepository prodRepository,
+        public ProductController(IProductRepository ProdRepository,
             ICategorieRepository categRepository,
             IWebHostEnvironment hostingEnvironment)
         {
-            productRepository = prodRepository;
+            ProductRepository = ProdRepository;
             CategRepository = categRepository;
             this.hostingEnvironment = hostingEnvironment;
         }
 
-        // GET: /Product/Index
         public ActionResult Index()
         {
-            var products = productRepository.GetAll();
-            return View(products);
+            var Products = ProductRepository.GetAll();
+            return View(Products);
         }
 
-        // GET: /Product/Search?val=...
         public ActionResult Search(string val)
         {
-            var result = productRepository.FindByName(val ?? "");
+            var result = ProductRepository.FindByName(val ?? "");
             return View("Index", result);
         }
 
-        // GET: /Product/Details/5
         public ActionResult Details(int id)
         {
-            Product product = productRepository.GetById(id);
+            Product product = ProductRepository.GetById(id);
             if (product == null) return NotFound();
             return View(product);
         }
 
-        // GET: /Product/Create
+        // GET: Product/Create
         public ActionResult Create()
         {
             ViewBag.CategoryId = new SelectList(CategRepository.GetAll(), "CategoryId", "CategoryName");
             return View();
         }
 
-        // POST: /Product/Create
+        // POST: Product/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult Create(CreateViewModel model)
@@ -60,40 +57,43 @@ namespace TP2.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
-            string? uniqueFileName = null;
-            if (model.ImagePath != null && model.ImagePath.Length > 0)
+            try
             {
-                string uploadsFolder = Path.Combine(hostingEnvironment.WebRootPath, "images");
-                Directory.CreateDirectory(uploadsFolder);
-                uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(model.ImagePath.FileName);
-                string filePath = Path.Combine(uploadsFolder, uniqueFileName);
-                using (var stream = new FileStream(filePath, FileMode.Create))
+                // IFormFile crashes Razor in .NET 8 — read file directly from request
+                string? uniqueFileName = null;
+                var imageFile = Request.Form.Files.FirstOrDefault();
+                if (imageFile != null && imageFile.Length > 0)
                 {
-                    model.ImagePath.CopyTo(stream);
+                    uniqueFileName = ProcessUploadedFile(imageFile);
                 }
+
+                Product newProduct = new Product
+                {
+                    Name = model.Name,
+                    Price = model.Price,
+                    QteStock = model.QteStock,
+                    CategoryId = model.CategoryId,
+                    Image = uniqueFileName
+                };
+
+                ProductRepository.Add(newProduct);
+                return RedirectToAction("Details", new { id = newProduct.ProductId });
             }
-
-            var newProduct = new Product
+            catch (Exception ex)
             {
-                Name = model.Name,
-                Price = model.Price,
-                QteStock = model.QteStock,
-                CategoryId = model.CategoryId,
-                Image = uniqueFileName
-            };
-
-            productRepository.Add(newProduct);
-            return RedirectToAction(nameof(Details), new { id = newProduct.ProductId });
+                ModelState.AddModelError("", $"Error: {ex.Message}");
+                return View(model);
+            }
         }
 
-        // GET: /Product/Edit/5
+        // GET: Product/Edit/5
         public ActionResult Edit(int id)
         {
             ViewBag.CategoryId = new SelectList(CategRepository.GetAll(), "CategoryId", "CategoryName");
-            Product product = productRepository.GetById(id);
+            Product product = ProductRepository.GetById(id);
             if (product == null) return NotFound();
 
-            var editViewModel = new EditViewModel
+            EditViewModel productEditViewModel = new EditViewModel
             {
                 ProductId = product.ProductId,
                 Name = product.Name,
@@ -103,10 +103,10 @@ namespace TP2.Controllers
                 ExistingImagePath = product.Image
             };
 
-            return View(editViewModel);
+            return View(productEditViewModel);
         }
 
-        // POST: /Product/Edit/5
+        // POST: Product/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult Edit(EditViewModel model)
@@ -116,7 +116,7 @@ namespace TP2.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
-            Product product = productRepository.GetById(model.ProductId);
+            Product product = ProductRepository.GetById(model.ProductId);
             if (product == null) return NotFound();
 
             product.Name = model.Name;
@@ -124,43 +124,57 @@ namespace TP2.Controllers
             product.QteStock = model.QteStock;
             product.CategoryId = model.CategoryId;
 
-            if (model.ImagePath != null && model.ImagePath.Length > 0)
+            // Check if a new image was uploaded
+            var imageFile = Request.Form.Files.FirstOrDefault();
+            if (imageFile != null && imageFile.Length > 0)
             {
+                // Delete old image if it exists
                 if (!string.IsNullOrEmpty(model.ExistingImagePath))
                 {
-                    string oldPath = Path.Combine(hostingEnvironment.WebRootPath, "images", model.ExistingImagePath);
-                    if (System.IO.File.Exists(oldPath))
-                        System.IO.File.Delete(oldPath);
+                    string oldFilePath = Path.Combine(hostingEnvironment.WebRootPath,
+                        "images", model.ExistingImagePath);
+                    if (System.IO.File.Exists(oldFilePath))
+                        System.IO.File.Delete(oldFilePath);
                 }
-                string uploadsFolder = Path.Combine(hostingEnvironment.WebRootPath, "images");
-                Directory.CreateDirectory(uploadsFolder);
-                string uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(model.ImagePath.FileName);
-                string filePath = Path.Combine(uploadsFolder, uniqueFileName);
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    model.ImagePath.CopyTo(stream);
-                }
-                product.Image = uniqueFileName;
+                product.Image = ProcessUploadedFile(imageFile);
             }
+            // else: no new image uploaded, keep existing
 
-            productRepository.Update(product);
-            return RedirectToAction(nameof(Index));
+            Product updatedProduct = ProductRepository.Update(product);
+            if (updatedProduct != null)
+                return RedirectToAction("Index");
+            else
+                return NotFound();
         }
 
-        // GET: /Product/Delete/5
+        [NonAction]
+        private string ProcessUploadedFile(IFormFile imageFile)
+        {
+            string uploadsFolder = Path.Combine(hostingEnvironment.WebRootPath, "images");
+            Directory.CreateDirectory(uploadsFolder);
+            string uniqueFileName = Guid.NewGuid().ToString() + "_" + imageFile.FileName;
+            string filePath = Path.Combine(uploadsFolder, uniqueFileName);
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                imageFile.CopyTo(fileStream);
+            }
+            return uniqueFileName;
+        }
+
+        // GET: Product/Delete/5
         public ActionResult Delete(int id)
         {
-            Product product = productRepository.GetById(id);
+            Product product = ProductRepository.GetById(id);
             if (product == null) return NotFound();
             return View(product);
         }
 
-        // POST: /Product/Delete/5
+        // POST: Product/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public ActionResult DeleteConfirmed(int ProductId)
         {
-            productRepository.Delete(ProductId);
+            ProductRepository.Delete(ProductId);
             return RedirectToAction(nameof(Index));
         }
     }

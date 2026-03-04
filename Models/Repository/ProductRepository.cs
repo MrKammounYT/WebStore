@@ -51,7 +51,7 @@ namespace TP2.Models.Repository
                 p1.Price = p.Price;
                 p1.QteStock = p.QteStock;
                 p1.CategoryId = p.CategoryId;
-                p1.Image = p.Image;   // was missing — caused image to be wiped on edit
+                p1.Image = p.Image;
                 context.SaveChanges();
             }
             return p1;

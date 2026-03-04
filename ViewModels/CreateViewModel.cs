@@ -5,8 +5,6 @@ namespace TP2.ViewModels
 {
     public class CreateViewModel
     {
-        public int ProductId { get; set; }
-
         [Required]
         [StringLength(50, MinimumLength = 5)]
         public string Name { get; set; }
@@ -19,10 +17,13 @@ namespace TP2.ViewModels
         [Display(Name = "Quantité en unité :")]
         public int QteStock { get; set; }
 
+        [Required(ErrorMessage = "Please select a category")]
         public int CategoryId { get; set; }
         public Category? Category { get; set; }
 
+        // IFormFile causes Razor crash in .NET 8 with Nullable enabled.
+        // Image is handled via Request.Form.Files in the controller instead.
         [Display(Name = "Image :")]
-        public IFormFile? ImagePath { get; set; }
+        public string? ImageFileName { get; set; }
     }
 }

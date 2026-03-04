@@ -11,8 +11,8 @@ using TP2.Models;
 namespace TP2.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260218125128_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260304115059_SeedCategories")]
+    partial class SeedCategories
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -51,6 +51,9 @@ namespace TP2.Migrations
 
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
+
+                    b.Property<string>("Image")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
                         .IsRequired()

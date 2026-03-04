@@ -15,7 +15,15 @@ namespace TP2.Controllers
 
         public IActionResult Index()
         {
-            return View();
+            try
+            {
+                return View();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in Home Index");
+                return StatusCode(500, $"Internal error: {ex.Message}");
+            }
         }
 
         public IActionResult Privacy()
