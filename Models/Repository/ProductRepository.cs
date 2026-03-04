@@ -15,7 +15,8 @@ namespace TP2.Models.Repository
         {
             return context.Products
                 .OrderBy(x => x.Name)
-                .Include(x => x.Category).ToList();
+                .Include(x => x.Category)
+                .ToList();
         }
 
         public Product GetById(int id)
@@ -24,7 +25,6 @@ namespace TP2.Models.Repository
                 .Where(x => x.ProductId == id)
                 .Include(x => x.Category)
                 .SingleOrDefault();
-
         }
 
         public void Add(Product p)
@@ -37,10 +37,9 @@ namespace TP2.Models.Repository
         {
             return context.Products
                 .Where(p => p.Name.Contains(name) ||
-
                             p.Category.CategoryName.Contains(name))
-
-                .Include(c => c.Category).ToList();
+                .Include(c => c.Category)
+                .ToList();
         }
 
         public Product Update(Product p)
@@ -52,16 +51,15 @@ namespace TP2.Models.Repository
                 p1.Price = p.Price;
                 p1.QteStock = p.QteStock;
                 p1.CategoryId = p.CategoryId;
+                p1.Image = p.Image;   // was missing — caused image to be wiped on edit
                 context.SaveChanges();
             }
-
             return p1;
         }
 
-        public void Delete(int ProductId)
+        public void Delete(int productId)
         {
-
-            Product p1 = context.Products.Find(ProductId);
+            Product p1 = context.Products.Find(productId);
             if (p1 != null)
             {
                 context.Products.Remove(p1);
@@ -69,13 +67,13 @@ namespace TP2.Models.Repository
             }
         }
 
-        public IList<Product> GetProductsByCategID(int? CategId)
+        public IList<Product> GetProductsByCategID(int? categId)
         {
             return context.Products
-                .Where(p => p.CategoryId.Equals(CategId))
+                .Where(p => p.CategoryId.Equals(categId))
                 .OrderBy(p => p.ProductId)
-                .Include(p => p.Category).ToList();
-
+                .Include(p => p.Category)
+                .ToList();
         }
     }
 }

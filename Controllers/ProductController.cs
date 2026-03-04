@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using TP2.Models;
 using TP2.Models.Repository;
@@ -12,127 +11,162 @@ namespace TP2.Controllers
         readonly ICategorieRepository CategRepository;
         private readonly IWebHostEnvironment hostingEnvironment;
 
-        public ProductController(IProductRepository ProdRepository, ICategorieRepository categRepository,
+        public ProductController(IProductRepository prodRepository,
+            ICategorieRepository categRepository,
             IWebHostEnvironment hostingEnvironment)
         {
-            productRepository = ProdRepository;
+            productRepository = prodRepository;
             CategRepository = categRepository;
             this.hostingEnvironment = hostingEnvironment;
         }
 
-        // GET: ProductController
+        // GET: /Product/Index
         public ActionResult Index()
         {
-            return View();
+            var products = productRepository.GetAll();
+            return View(products);
         }
 
-        // GET: ProductController/Create
+        // GET: /Product/Search?val=...
+        public ActionResult Search(string val)
+        {
+            var result = productRepository.FindByName(val ?? "");
+            return View("Index", result);
+        }
+
+        // GET: /Product/Details/5
+        public ActionResult Details(int id)
+        {
+            Product product = productRepository.GetById(id);
+            if (product == null) return NotFound();
+            return View(product);
+        }
+
+        // GET: /Product/Create
         public ActionResult Create()
         {
             ViewBag.CategoryId = new SelectList(CategRepository.GetAll(), "CategoryId", "CategoryName");
             return View();
         }
 
-        // POST: ProductController/Create
+        // POST: /Product/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public ActionResult Create(CreateViewModel model)
         {
-            // Ensure categories dropdown is populated when returning the view
             ViewBag.CategoryId = new SelectList(CategRepository.GetAll(), "CategoryId", "CategoryName");
 
             if (!ModelState.IsValid)
-            {
-                // Return the same view so validation messages show, include model so fields are preserved
                 return View(model);
-            }
 
+            // Handle optional image upload
             string uniqueFileName = null;
             if (model.ImagePath != null && model.ImagePath.Length > 0)
             {
                 string uploadsFolder = Path.Combine(hostingEnvironment.WebRootPath, "images");
+                Directory.CreateDirectory(uploadsFolder); // safe no-op if exists
                 uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(model.ImagePath.FileName);
                 string filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                // Ensure the uploads folder exists
-                if (!Directory.Exists(uploadsFolder))
+                using (var stream = new FileStream(filePath, FileMode.Create))
                 {
-                    Directory.CreateDirectory(uploadsFolder);
-                }
-
-                using (var fileStream = new FileStream(filePath, FileMode.Create))
-                {
-                    model.ImagePath.CopyTo(fileStream);
+                    model.ImagePath.CopyTo(stream);
                 }
             }
 
-            var newProduct = new Product(0, model.Name, model.Price
-                ,model.QteStock, model.CategoryId,CategRepository.GetById(model.CategoryId),
-                uniqueFileName);
-            
+            // Use object initializer — NOT the parameterized constructor
+            var newProduct = new Product
+            {
+                Name = model.Name,
+                Price = model.Price,
+                QteStock = model.QteStock,
+                CategoryId = model.CategoryId,
+                Image = uniqueFileName
+            };
 
             productRepository.Add(newProduct);
-
-            // Redirect to details after successful create; repository.Add should set ProductId after SaveChanges
             return RedirectToAction(nameof(Details), new { id = newProduct.ProductId });
         }
 
-        // GET: ProductController/Details/5
-        public ActionResult Details(int id)
-        {
-            Product product = productRepository.GetById(id);
-            if (product == null) return View();
-            return View(product);
-        }
-
-        // GET: ProductController/Edit/5
+        // GET: /Product/Edit/5
         public ActionResult Edit(int id)
         {
             ViewBag.CategoryId = new SelectList(CategRepository.GetAll(), "CategoryId", "CategoryName");
-            return View();
+            Product product = productRepository.GetById(id);
+            if (product == null) return NotFound();
+
+            var editViewModel = new EditViewModel
+            {
+                ProductId = product.ProductId,
+                Name = product.Name,
+                Price = product.Price,
+                QteStock = product.QteStock,
+                CategoryId = product.CategoryId,
+                ExistingImagePath = product.Image
+            };
+
+            return View(editViewModel);
         }
 
-        // POST: ProductController/Edit/5
+        // POST: /Product/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit(Product p)
+        public ActionResult Edit(EditViewModel model)
         {
-            if (p == null) return View();
-            try
+            ViewBag.CategoryId = new SelectList(CategRepository.GetAll(), "CategoryId", "CategoryName");
+
+            if (!ModelState.IsValid)
+                return View(model);
+
+            Product product = productRepository.GetById(model.ProductId);
+            if (product == null) return NotFound();
+
+            product.Name = model.Name;
+            product.Price = model.Price;
+            product.QteStock = model.QteStock;
+            product.CategoryId = model.CategoryId;
+
+            if (model.ImagePath != null && model.ImagePath.Length > 0)
             {
-                ViewBag.CategoryId = new SelectList(CategRepository.GetAll(), "CategoryId", "CategoryName");
-                productRepository.Update(p);
-                return RedirectToAction(nameof(Index));
+                // Delete old image file if there was one
+                if (!string.IsNullOrEmpty(model.ExistingImagePath))
+                {
+                    string oldPath = Path.Combine(hostingEnvironment.WebRootPath, "images", model.ExistingImagePath);
+                    if (System.IO.File.Exists(oldPath))
+                        System.IO.File.Delete(oldPath);
+                }
+
+                // Save new image
+                string uploadsFolder = Path.Combine(hostingEnvironment.WebRootPath, "images");
+                Directory.CreateDirectory(uploadsFolder);
+                string uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(model.ImagePath.FileName);
+                string filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    model.ImagePath.CopyTo(stream);
+                }
+                product.Image = uniqueFileName;
             }
-            catch
-            {
-                return View();
-            }
+            // else: keep existing image — don't touch product.Image
+
+            productRepository.Update(product);
+            return RedirectToAction(nameof(Index));
         }
 
-        // GET: ProductController/Delete/5
+        // GET: /Product/Delete/5
         public ActionResult Delete(int id)
         {
-            productRepository.Delete(id);
-            return View();
+            Product product = productRepository.GetById(id);
+            if (product == null) return NotFound();
+            return View(product); // show confirmation page
         }
 
-        // POST: ProductController/Delete/5
-        [HttpPost]
+        // POST: /Product/Delete/5
+        [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        public ActionResult Delete(Product product)
+        public ActionResult DeleteConfirmed(int ProductId)
         {
-            if (product == null) return View();
-            try
-            {
-                // NOTE: original code deleted by CategoryId; confirm this is intended.
-                productRepository.Delete(product.ProductId);
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
+            productRepository.Delete(ProductId);
+            return RedirectToAction(nameof(Index));
         }
     }
 }

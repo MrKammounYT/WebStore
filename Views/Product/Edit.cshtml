@@ -1,49 +1,76 @@
-﻿@model TP2.Models.Product
-
+﻿@model TP2.Models.EditViewModel
 @{
     ViewData["Title"] = "Edit";
+    var photoPath = "~/images/" + (Model.ExistingImagePath ?? "noimage.jpg");
 }
 
 <h1>Edit</h1>
-
 <h4>Product</h4>
 <hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="ProductId" />
-            <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Price" class="control-label"></label>
-                <input asp-for="Price" class="form-control" />
-                <span asp-validation-for="Price" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="QteStock" class="control-label"></label>
-                <input asp-for="QteStock" class="form-control" />
-                <span asp-validation-for="QteStock" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="CategoryId" class="control-label"></label>
-                <select asp-for="CategoryId" class="form-control" asp-items="ViewBag.CategoryId"></select>
-                <span asp-validation-for="CategoryId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
-            </div>
-        </form>
-    </div>
-</div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
+<form asp-controller="Product" asp-action="Edit" enctype="multipart/form-data" method="post" class="mt-3">
+    <div asp-validation-summary="All" class="text-danger"></div>
+
+    @* Hidden fields to preserve ProductId and existing image on submit *@
+    <input hidden asp-for="ProductId" />
+    <input hidden asp-for="ExistingImagePath" />
+
+    <div class="form-group row">
+        <label asp-for="Name" class="control-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="form-group row">
+        <label asp-for="Price" class="control-label"></label>
+        <input asp-for="Price" class="form-control" />
+        <span asp-validation-for="Price" class="text-danger"></span>
+    </div>
+    <div class="form-group row">
+        <label asp-for="QteStock" class="control-label"></label>
+        <input asp-for="QteStock" class="form-control" />
+        <span asp-validation-for="QteStock" class="text-danger"></span>
+    </div>
+    <div class="form-group row">
+        <label asp-for="CategoryId" class="control-label"></label>
+        <select asp-for="CategoryId" class="form-control" asp-items="ViewBag.CategoryId"></select>
+        <span asp-validation-for="CategoryId" class="text-danger"></span>
+    </div>
+    <div class="form-group row">
+        <label asp-for="ImagePath" class="col-sm-2 col-form-label"></label>
+        <div class="col-sm-10">
+            <div class="custom-file">
+                <input asp-for="ImagePath" class="custom-file-input form-control" id="imageInput">
+                <label class="custom-file-label" for="imageInput">Cliquer ici pour changer la photo</label>
+            </div>
+        </div>
+    </div>
+
+    @* Preview of existing or newly selected image *@
+    <div class="form-group row col-sm-4 offset-4">
+        <img id="imageEmp" src="@photoPath" asp-append-version="true" height="100" width="100" />
+    </div>
+
+    <div class="form-group row">
+        <div class="col-sm-10">
+            <button type="submit" class="btn btn-primary">Update</button>
+            <a asp-action="Index" asp-controller="Product" class="btn btn-secondary">Cancel</a>
+        </div>
+    </div>
+</form>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        $(document).ready(function () {
+            $('.custom-file-input').on("change", function () {
+                var fileName = $(this).val().split("\\").pop();
+                $(this).next('.custom-file-label').html(fileName);
+                // Live preview of selected image
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    $('#imageEmp').attr('src', e.target.result);
+                };
+                reader.readAsDataURL(this.files[0]);
+            });
+        });
+    </script>
 }
