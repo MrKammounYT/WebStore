@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc.Rendering;
 using TP2.Models;
 using TP2.Models.Repository;
+using TP2.ViewModels;
 
 namespace TP2.Controllers
 {
@@ -59,12 +60,11 @@ namespace TP2.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
-            // Handle optional image upload
-            string uniqueFileName = null;
+            string? uniqueFileName = null;
             if (model.ImagePath != null && model.ImagePath.Length > 0)
             {
                 string uploadsFolder = Path.Combine(hostingEnvironment.WebRootPath, "images");
-                Directory.CreateDirectory(uploadsFolder); // safe no-op if exists
+                Directory.CreateDirectory(uploadsFolder);
                 uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(model.ImagePath.FileName);
                 string filePath = Path.Combine(uploadsFolder, uniqueFileName);
                 using (var stream = new FileStream(filePath, FileMode.Create))
@@ -73,7 +73,6 @@ namespace TP2.Controllers
                 }
             }
 
-            // Use object initializer — NOT the parameterized constructor
             var newProduct = new Product
             {
                 Name = model.Name,
@@ -127,15 +126,12 @@ namespace TP2.Controllers
 
             if (model.ImagePath != null && model.ImagePath.Length > 0)
             {
-                // Delete old image file if there was one
                 if (!string.IsNullOrEmpty(model.ExistingImagePath))
                 {
                     string oldPath = Path.Combine(hostingEnvironment.WebRootPath, "images", model.ExistingImagePath);
                     if (System.IO.File.Exists(oldPath))
                         System.IO.File.Delete(oldPath);
                 }
-
-                // Save new image
                 string uploadsFolder = Path.Combine(hostingEnvironment.WebRootPath, "images");
                 Directory.CreateDirectory(uploadsFolder);
                 string uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(model.ImagePath.FileName);
@@ -146,7 +142,6 @@ namespace TP2.Controllers
                 }
                 product.Image = uniqueFileName;
             }
-            // else: keep existing image — don't touch product.Image
 
             productRepository.Update(product);
             return RedirectToAction(nameof(Index));
@@ -157,7 +152,7 @@ namespace TP2.Controllers
         {
             Product product = productRepository.GetById(id);
             if (product == null) return NotFound();
-            return View(product); // show confirmation page
+            return View(product);
         }
 
         // POST: /Product/Delete/5

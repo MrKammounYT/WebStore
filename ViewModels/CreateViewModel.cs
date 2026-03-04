@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using TP2.Models;
 
-namespace TP2.Models
+namespace TP2.ViewModels
 {
     public class CreateViewModel
     {
@@ -21,7 +22,6 @@ namespace TP2.Models
         public int CategoryId { get; set; }
         public Category? Category { get; set; }
 
-        // Not required - product can be saved without an image
         [Display(Name = "Image :")]
         public IFormFile? ImagePath { get; set; }
     }
